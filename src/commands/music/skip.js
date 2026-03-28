@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { replyWithCard } = require('../../utils/respond');
 
 function formatDuration(milliseconds) {
   if (!milliseconds || milliseconds <= 0) return '00:00';
@@ -70,7 +71,7 @@ module.exports = {
         timestamp: new Date().toISOString()
       };
 
-      await message.reply({ embeds: [embed] });
+      await replyWithCard(message, embed);
       
     } catch (error) {
       console.error('Skip error:', error);
@@ -119,7 +120,7 @@ module.exports = {
         timestamp: new Date().toISOString()
       };
 
-      await interaction.reply({ embeds: [embed] });
+      await replyWithCard(interaction, embed);
       
     } catch (error) {
       console.error('Skip error:', error);
@@ -127,3 +128,7 @@ module.exports = {
     }
   }
 };
+
+
+
+

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { replyWithCard } = require('../../utils/respond');
 
 function formatDuration(milliseconds) {
   if (!milliseconds || milliseconds <= 0) return '00:00';
@@ -47,7 +48,6 @@ module.exports = {
     }
 
     try {
-      // If no volume provided, show current volume
       if (!args[0]) {
         const currentVolume = player.volume || 100;
         const embed = {
@@ -59,7 +59,7 @@ module.exports = {
           ],
           timestamp: new Date().toISOString()
         };
-        return message.reply({ embeds: [embed] });
+        return replyWithCard(message, embed);
       }
 
       const volume = parseInt(args[0]);
@@ -84,7 +84,7 @@ module.exports = {
         timestamp: new Date().toISOString()
       };
 
-      await message.reply({ embeds: [embed] });
+      await replyWithCard(message, embed);
       
     } catch (error) {
       console.error('Volume error:', error);
@@ -111,8 +111,6 @@ module.exports = {
 
     try {
       const volume = interaction.options.getInteger('level');
-      
-      // If no volume provided, show current volume
       if (volume === null) {
         const currentVolume = player.volume || 100;
         const embed = {
@@ -124,7 +122,7 @@ module.exports = {
           ],
           timestamp: new Date().toISOString()
         };
-        return interaction.reply({ embeds: [embed] });
+        return replyWithCard(interaction, embed);
       }
       
       if (volume < 0 || volume > 100) {
@@ -147,7 +145,7 @@ module.exports = {
         timestamp: new Date().toISOString()
       };
 
-      await interaction.reply({ embeds: [embed] });
+      await replyWithCard(interaction, embed);
       
     } catch (error) {
       console.error('Volume error:', error);
@@ -155,3 +153,7 @@ module.exports = {
     }
   }
 };
+
+
+
+

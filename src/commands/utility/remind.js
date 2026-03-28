@@ -81,3 +81,4 @@ function parseTime(timeStr) {
 
   return parseInt(amount) * multipliers[unit];
 }
+

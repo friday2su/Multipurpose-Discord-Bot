@@ -1,3 +1,5 @@
+const { replyError } = require('../utils/respond');
+
 module.exports = {
   name: 'messageCreate',
   async execute(message, client) {
@@ -20,7 +22,9 @@ module.exports = {
       await command.executePrefix(message, args, client);
     } catch (error) {
       console.error('Error executing prefix command:', error);
-      await message.reply('There was an error while executing this command!');
+      await replyError(message, 'Something went wrong while running that command. Please try again in a moment.');
     }
   }
 };
+
+

@@ -1,143 +1,79 @@
 const { SlashCommandBuilder } = require('discord.js');
+const {
+  formatCurrency,
+  getNetWorth,
+  getOrCreateUser,
+  resolveAmountInput,
+} = require('../../utils/economy');
+const { replyError, replyWithCard } = require('../../utils/respond');
+
+async function handleWithdraw(target, user, rawInput) {
+  const userData = await getOrCreateUser(user);
+  const amount = resolveAmountInput(rawInput, userData.bank);
+
+  if (!amount) {
+    return replyError(target, 'Enter a valid amount or use `all` / `half`.');
+  }
+
+  if (userData.bank < amount) {
+    return replyError(target, `You only have ${formatCurrency(userData.bank)} in your bank.`);
+  }
+
+  userData.bank -= amount;
+  userData.balance += amount;
+  await userData.save();
+
+  return replyWithCard(target, {
+    title: 'Withdrawal Complete',
+    description: `Moved **${formatCurrency(amount)}** back into your wallet.`,
+    fields: [
+      { name: 'Wallet', value: formatCurrency(userData.balance), inline: true },
+      { name: 'Bank', value: formatCurrency(userData.bank), inline: true },
+      { name: 'Net worth', value: formatCurrency(getNetWorth(userData)), inline: true },
+    ],
+    footer: { text: 'Wallet cash is available immediately, but it is less secure.' },
+  });
+}
 
 module.exports = {
   category: 'Economy',
   name: 'withdraw',
   description: 'Withdraw money from bank to wallet',
   slashOnly: false,
-  
+
   data: new SlashCommandBuilder()
     .setName('withdraw')
     .setDescription('Withdraw money from bank to wallet')
-    .addIntegerOption(option => 
-      option.setName('amount')
-        .setDescription('Amount to withdraw (or "all")')
+    .addIntegerOption((option) =>
+      option
+        .setName('amount')
+        .setDescription('Amount to withdraw')
         .setMinValue(1))
-    .addStringOption(option => 
-      option.setName('action')
-        .setDescription('Withdraw amount')
+    .addStringOption((option) =>
+      option
+        .setName('action')
+        .setDescription('Quick withdraw amount')
         .addChoices(
           { name: 'All money', value: 'all' },
-          { name: 'Half money', value: 'half' }
+          { name: 'Half money', value: 'half' },
         )),
 
-  async executePrefix(message, args, client) {
-    const User = require('../../models/User');
-    
+  async executePrefix(message, args) {
     try {
-      let userData = await User.findOne({ userId: message.author.id });
-      
-      if (!userData) {
-        return message.reply({ content: 'You don\'t have a bank account! Use `!balance` to create one.', flags: [64] });
-      }
-
-      let amount;
-      const action = args[0]?.toLowerCase();
-
-      if (action === 'all') {
-        amount = userData.bank;
-      } else if (action === 'half') {
-        amount = Math.floor(userData.bank / 2);
-      } else {
-        amount = parseInt(args[0]);
-      }
-
-      if (isNaN(amount) || amount < 1) {
-        return message.reply({ 
-          content: 'Please specify a valid amount or use "all"/"half"!',
-          flags: [64]
-        });
-      }
-
-      if (userData.bank < amount) {
-        return message.reply({ 
-          content: `You don't have enough money in bank! You have $${userData.bank} in bank.`,
-          flags: [64]
-        });
-      }
-
-      userData.bank -= amount;
-      userData.balance += amount;
-      await userData.save();
-
-      const embed = {
-        color: 0x00D26A,
-        title: '🏦 Withdraw Successful!',
-        description: `You withdrew **$${amount.toLocaleString()}** from your bank account`,
-        fields: [
-          { name: '💵 Wallet Balance', value: `$${userData.balance.toLocaleString()}`, inline: true },
-          { name: '🏦 Bank Balance', value: `$${userData.bank.toLocaleString()}`, inline: true },
-          { name: '💎 Total Balance', value: `$${(userData.balance + userData.bank).toLocaleString()}`, inline: true }
-        ],
-        footer: { text: '⚠️ Money in wallet can be robbed!' },
-        timestamp: new Date().toISOString()
-      };
-
-      await message.reply({ embeds: [embed] });
-      
+      await handleWithdraw(message, message.author, args[0]);
     } catch (error) {
       console.error('Withdraw error:', error);
-      await message.reply({ content: 'There was an error withdrawing money!', flags: [64] });
+      await replyError(message, 'I could not move that money into your wallet.');
     }
   },
 
   async executeSlash(interaction) {
-    const User = require('../../models/User');
-    
-    const amount = interaction.options.getInteger('amount');
-    const action = interaction.options.getString('action');
-
     try {
-      let userData = await User.findOne({ userId: interaction.user.id });
-      
-      if (!userData) {
-        return interaction.reply({ content: 'You don\'t have a bank account! Use `/balance` to create one.', flags: [64] });
-      }
-
-      let withdrawAmount;
-      
-      if (action === 'all') {
-        withdrawAmount = userData.bank;
-      } else if (action === 'half') {
-        withdrawAmount = Math.floor(userData.bank / 2);
-      } else if (amount) {
-        withdrawAmount = amount;
-      } else {
-        return interaction.reply({ 
-          content: 'Please specify an amount or choose "all"/"half"!',
-          flags: [64]
-        });
-      }
-
-      if (userData.bank < withdrawAmount) {
-        return interaction.reply({ 
-          content: `You don't have enough money in bank! You have $${userData.bank} in bank.`,
-          flags: [64]
-        });
-      }
-
-      userData.bank -= withdrawAmount;
-      userData.balance += withdrawAmount;
-      await userData.save();
-
-      const embed = {
-        color: 0x00D26A,
-        title: '🏦 Withdraw Successful!',
-        description: `You withdrew **$${withdrawAmount.toLocaleString()}** from your bank account`,
-        fields: [
-          { name: '💵 Wallet Balance', value: `$${userData.balance.toLocaleString()}`, inline: true },
-          { name: '🏦 Bank Balance', value: `$${userData.bank.toLocaleString()}`, inline: true },
-          { name: '💎 Total Balance', value: `$${(userData.balance + userData.bank).toLocaleString()}`, inline: true }
-        ],
-        footer: { text: '⚠️ Money in wallet can be robbed!' },
-        timestamp: new Date().toISOString()
-      };
-
-      await interaction.reply({ embeds: [embed] });
-      
+      const input = interaction.options.getString('action') || interaction.options.getInteger('amount');
+      await handleWithdraw(interaction, interaction.user, input);
     } catch (error) {
       console.error('Withdraw error:', error);
-      await interaction.reply({ content: 'There was an error withdrawing money!', flags: [64] });
+      await replyError(interaction, 'I could not move that money into your wallet.');
     }
-  }
+  },
 };

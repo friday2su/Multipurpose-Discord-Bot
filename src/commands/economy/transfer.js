@@ -1,180 +1,112 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { formatCurrency, getOrCreateUser } = require('../../utils/economy');
+const { replyError, replyWithCard } = require('../../utils/respond');
+
+async function transferFunds(sender, receiver, amount) {
+  const senderData = await getOrCreateUser(sender);
+  const receiverData = await getOrCreateUser(receiver);
+
+  if (sender.id === receiver.id) {
+    return { error: 'You cannot transfer money to yourself.' };
+  }
+
+  if (amount < 1) {
+    return { error: 'Enter a valid amount greater than 0.' };
+  }
+
+  if (senderData.balance < amount) {
+    return { error: `You only have ${formatCurrency(senderData.balance)} available in your wallet.` };
+  }
+
+  senderData.balance -= amount;
+  receiverData.balance += amount;
+  await senderData.save();
+  await receiverData.save();
+
+  return {
+    senderData,
+    receiverData,
+  };
+}
+
+async function notifyReceiver(receiver, sender, amount) {
+  try {
+    await receiver.send(`You received **${formatCurrency(amount)}** from **${sender.username}**.`);
+  } catch (error) {}
+}
 
 module.exports = {
   category: 'Economy',
   name: 'transfer',
   description: 'Transfer money to another user',
   slashOnly: false,
-  
+
   data: new SlashCommandBuilder()
     .setName('transfer')
     .setDescription('Transfer money to another user')
-    .addUserOption(option => 
-      option.setName('user')
+    .addUserOption((option) =>
+      option
+        .setName('user')
         .setDescription('The user to transfer money to')
         .setRequired(true))
-    .addIntegerOption(option => 
-      option.setName('amount')
+    .addIntegerOption((option) =>
+      option
+        .setName('amount')
         .setDescription('Amount to transfer')
         .setRequired(true)
         .setMinValue(1)),
 
-  async executePrefix(message, args, client) {
-    const User = require('../../models/User');
-    
-    if (args.length < 2) {
-      return message.reply({ 
-        content: 'Usage: `!transfer <user> <amount>`', 
-        flags: [64] 
-      });
-    }
+  async executePrefix(message, args) {
+    const receiver = message.mentions.users.first();
+    const amount = Number.parseInt(args[1], 10);
 
-    const user = message.mentions.users.first();
-    const amount = parseInt(args[1]);
-
-    if (!user) {
-      return message.reply({ content: 'Please mention a valid user!', flags: [64] });
-    }
-
-    if (user.id === message.author.id) {
-      return message.reply({ content: 'You can\'t transfer money to yourself!', flags: [64] });
-    }
-
-    if (isNaN(amount) || amount < 1) {
-      return message.reply({ content: 'Please specify a valid amount!', flags: [64] });
+    if (!receiver || Number.isNaN(amount)) {
+      return replyError(message, 'Usage: `!transfer <user> <amount>`');
     }
 
     try {
-      let senderData = await User.findOne({ userId: message.author.id });
-      let receiverData = await User.findOne({ userId: user.id });
-
-      if (!senderData) {
-        return message.reply({ content: 'You don\'t have a bank account! Use `!balance` to create one.', flags: [64] });
+      const result = await transferFunds(message.author, receiver, amount);
+      if (result.error) {
+        return replyError(message, result.error);
       }
 
-      if (!receiverData) {
-        receiverData = new User({
-          userId: user.id,
-          username: user.username,
-          tag: user.tag,
-          balance: 0,
-          bank: 0
-        });
-      }
-
-      if (senderData.balance < amount) {
-        return message.reply({ 
-          content: `You don't have enough money! You have $${senderData.balance} but tried to transfer $${amount}.`,
-          flags: [64]
-        });
-      }
-
-      // Transfer the money
-      senderData.balance -= amount;
-      receiverData.balance += amount;
-
-      await senderData.save();
-      await receiverData.save();
-
-      const embed = {
-        color: 0x00D26A,
-        title: '💸 Transfer Successful',
-        description: `Successfully transferred **$${amount}** to **${user.username}**`,
+      await notifyReceiver(receiver, message.author, amount);
+      await replyWithCard(message, {
+        title: 'Transfer Complete',
+        description: `You sent **${formatCurrency(amount)}** to **${receiver.username}**.`,
         fields: [
-          { name: '👤 Sender', value: `${message.author.username}`, inline: true },
-          { name: '👥 Receiver', value: `${user.username}`, inline: true },
-          { name: '💰 Amount', value: `$${amount}`, inline: true },
-          { name: '💵 Your Balance', value: `$${senderData.balance.toLocaleString()}`, inline: true }
+          { name: 'Your wallet', value: formatCurrency(result.senderData.balance), inline: true },
+          { name: `${receiver.username}'s wallet`, value: formatCurrency(result.receiverData.balance), inline: true },
         ],
-        timestamp: new Date().toISOString()
-      };
-
-      await message.reply({ embeds: [embed] });
-
-      // Notify the receiver
-      try {
-        await user.send({
-          content: `💰 You received $${amount} from ${message.author.username}!`
-        });
-      } catch (err) {
-        // User has DMs disabled
-      }
-
+      });
     } catch (error) {
       console.error('Transfer error:', error);
-      await message.reply({ content: 'There was an error transferring money!', flags: [64] });
+      await replyError(message, 'I could not complete that transfer right now.');
     }
   },
 
   async executeSlash(interaction) {
-    const User = require('../../models/User');
-    
-    const user = interaction.options.getUser('user');
+    const receiver = interaction.options.getUser('user');
     const amount = interaction.options.getInteger('amount');
 
-    if (user.id === interaction.user.id) {
-      return interaction.reply({ content: 'You can\'t transfer money to yourself!', flags: [64] });
-    }
-
     try {
-      let senderData = await User.findOne({ userId: interaction.user.id });
-      let receiverData = await User.findOne({ userId: user.id });
-
-      if (!senderData) {
-        return interaction.reply({ content: 'You don\'t have a bank account! Use `/balance` to create one.', flags: [64] });
+      const result = await transferFunds(interaction.user, receiver, amount);
+      if (result.error) {
+        return replyError(interaction, result.error);
       }
 
-      if (!receiverData) {
-        receiverData = new User({
-          userId: user.id,
-          username: user.username,
-          tag: user.tag,
-          balance: 0,
-          bank: 0
-        });
-      }
-
-      if (senderData.balance < amount) {
-        return interaction.reply({ 
-          content: `You don't have enough money! You have $${senderData.balance} but tried to transfer $${amount}.`,
-          flags: [64]
-        });
-      }
-
-      // Transfer the money
-      senderData.balance -= amount;
-      receiverData.balance += amount;
-
-      await senderData.save();
-      await receiverData.save();
-
-      const embed = {
-        color: 0x00D26A,
-        title: '💸 Transfer Successful',
-        description: `Successfully transferred **$${amount}** to **${user.username}**`,
+      await notifyReceiver(receiver, interaction.user, amount);
+      await replyWithCard(interaction, {
+        title: 'Transfer Complete',
+        description: `You sent **${formatCurrency(amount)}** to **${receiver.username}**.`,
         fields: [
-          { name: '👤 Sender', value: `${interaction.user.username}`, inline: true },
-          { name: '👥 Receiver', value: `${user.username}`, inline: true },
-          { name: '💰 Amount', value: `$${amount}`, inline: true },
-          { name: '💵 Your Balance', value: `$${senderData.balance.toLocaleString()}`, inline: true }
+          { name: 'Your wallet', value: formatCurrency(result.senderData.balance), inline: true },
+          { name: `${receiver.username}'s wallet`, value: formatCurrency(result.receiverData.balance), inline: true },
         ],
-        timestamp: new Date().toISOString()
-      };
-
-      await interaction.reply({ embeds: [embed] });
-
-      // Notify the receiver
-      try {
-        await user.send({
-          content: `💰 You received $${amount} from ${interaction.user.username}!`
-        });
-      } catch (err) {
-        // User has DMs disabled
-      }
-
+      });
     } catch (error) {
       console.error('Transfer error:', error);
-      await interaction.reply({ content: 'There was an error transferring money!', flags: [64] });
+      await replyError(interaction, 'I could not complete that transfer right now.');
     }
-  }
+  },
 };

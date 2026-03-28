@@ -54,12 +54,8 @@ module.exports = {
       await message.delete();
       
       let options = { limit: Math.min(amount, 100) };
-      
-      // Parse additional arguments
       for (let i = 1; i < args.length; i++) {
         const arg = args[i];
-        
-        // Check for user mention
         const userMatch = arg.match(/^<@!?(\d+)>$/);
         if (userMatch) {
           const userId = userMatch[1];
@@ -70,15 +66,11 @@ module.exports = {
 
       const messages = await message.channel.messages.fetch(options);
       let filtered = messages;
-
-      // Filter by user if mentioned
       const userMention = args.find(arg => arg.match(/^<@!?(\d+)>$/));
       if (userMention) {
         const userId = userMention.match(/^<@!?(\d+)>$/)[1];
         filtered = messages.filter(m => m.author.id === userId);
       }
-
-      // Filter by content if specified
       const contentArg = args.find(arg => !arg.match(/^<@!?(\d+)>$/) && !arg.match(/^\d+$/));
       if (contentArg) {
         filtered = filtered.filter(m => m.content.toLowerCase().includes(contentArg.toLowerCase()));
@@ -94,7 +86,7 @@ module.exports = {
       
       await message.channel.send({
         content: `🗑️ Successfully deleted **${deleted.size}** message${deleted.size !== 1 ? 's' : ''}!`,
-        flags: [64] // ephemeral to avoid clutter
+        flags: [64]
       }).then(msg => {
         setTimeout(() => msg.delete(), 5000);
       });
@@ -119,8 +111,6 @@ module.exports = {
 
       const messages = await interaction.channel.messages.fetch(options);
       let filtered = messages;
-
-      // Apply filters
       if (user) {
         filtered = filtered.filter(m => m.author.id === user.id);
       }
@@ -151,3 +141,4 @@ module.exports = {
     }
   }
 };
+

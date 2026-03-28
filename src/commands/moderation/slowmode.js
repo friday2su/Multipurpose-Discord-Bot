@@ -43,7 +43,7 @@ module.exports = {
         d: 24 * 60 * 60
       };
 
-      seconds = Math.min(parseInt(amount) * multipliers[unit], 21600); // Max 6 hours
+      seconds = Math.min(parseInt(amount) * multipliers[unit], 21600);
     }
 
     try {
@@ -80,7 +80,7 @@ module.exports = {
         d: 24 * 60 * 60
       };
 
-      seconds = Math.min(parseInt(amount) * multipliers[unit], 21600); // Max 6 hours
+      seconds = Math.min(parseInt(amount) * multipliers[unit], 21600);
     }
 
     try {
@@ -97,3 +97,4 @@ module.exports = {
     }
   }
 };
+

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { replyWithCard } = require('../../utils/respond');
 
 module.exports = {
   category: 'Fun',
@@ -32,7 +33,7 @@ module.exports = {
       timestamp: new Date().toISOString()
     };
 
-    await message.reply({ embeds: [embed] });
+    await replyWithCard(message, embed);
   },
 
   async executeSlash(interaction) {
@@ -47,6 +48,10 @@ module.exports = {
       timestamp: new Date().toISOString()
     };
 
-    await interaction.reply({ embeds: [embed] });
+    await replyWithCard(interaction, embed);
   }
 };
+
+
+
+

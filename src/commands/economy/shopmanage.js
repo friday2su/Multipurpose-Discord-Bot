@@ -1,163 +1,126 @@
 const { SlashCommandBuilder, PermissionFlagsBits } = require('discord.js');
+const { getShopItems } = require('../../utils/economy');
+const { replyError, replyWithCard } = require('../../utils/respond');
+
+function createCatalogCard(title) {
+  return {
+    color: 0x00d26a,
+    title,
+    fields: getShopItems().map((item) => ({
+      name: `${item.emoji} ${item.name}`,
+      value: `ID: ${item.id}\nPrice: $${item.price}`,
+      inline: true,
+    })),
+    timestamp: new Date().toISOString(),
+  };
+}
+
+function createPreviewCard(title, description, itemId, price) {
+  return {
+    color: 0x00d26a,
+    title,
+    description,
+    fields: [
+      { name: 'Item ID', value: itemId, inline: true },
+      { name: 'Price', value: `$${price}`, inline: true },
+    ],
+    timestamp: new Date().toISOString(),
+  };
+}
 
 module.exports = {
   category: 'Economy',
   name: 'shopmanage',
   description: 'Manage shop items (Admin only)',
   slashOnly: false,
-  
+
   data: new SlashCommandBuilder()
     .setName('shopmanage')
     .setDescription('Manage shop items (Admin only)')
-    .addStringOption(option => 
-      option.setName('action')
+    .addStringOption((option) =>
+      option
+        .setName('action')
         .setDescription('Action to perform')
         .addChoices(
-          { name: '➕ Add item', value: 'add' },
-          { name: '➖ Remove item', value: 'remove' },
-          { name: '📝 List items', value: 'list' }
+          { name: 'Add item', value: 'add' },
+          { name: 'Remove item', value: 'remove' },
+          { name: 'List items', value: 'list' },
         ))
-    .addStringOption(option => 
-      option.setName('itemid')
+    .addStringOption((option) =>
+      option
+        .setName('itemid')
         .setDescription('Item ID for remove action')
         .setRequired(false))
-    .addStringOption(option => 
-      option.setName('itemname')
+    .addStringOption((option) =>
+      option
+        .setName('itemname')
         .setDescription('Item name for add action')
         .setRequired(false))
-    .addIntegerOption(option => 
-      option.setName('price')
+    .addIntegerOption((option) =>
+      option
+        .setName('price')
         .setDescription('Item price for add action')
         .setMinValue(0)
         .setRequired(false))
-    .addStringOption(option => 
-      option.setName('emoji')
+    .addStringOption((option) =>
+      option
+        .setName('emoji')
         .setDescription('Item emoji for add action')
         .setRequired(false))
     .setDefaultMemberPermissions(PermissionFlagsBits.Administrator),
 
-  async executePrefix(message, args, client) {
+  async executePrefix(message, args) {
     if (!message.member.permissions.has(PermissionFlagsBits.Administrator)) {
-      return message.reply({ content: 'You don\'t have permission to manage the shop!', flags: [64] });
+      return replyError(message, 'You do not have permission to manage the shop.');
     }
 
     const action = args[0]?.toLowerCase();
 
     try {
       if (action === 'list') {
-        // This would normally fetch from database, but for now using hardcoded items
-        const shopItems = [
-          { id: 'pizza', name: '🍕 Pizza', price: 50 },
-          { id: 'burger', name: '🍔 Burger', price: 40 },
-          { id: 'taco', name: '🌮 Taco', price: 30 },
-          { id: 'ice_cream', name: '🍦 Ice Cream', price: 35 },
-          { id: 'cake', name: '🍰 Cake', price: 80 },
-          { id: 'wine', name: '🍷 Wine', price: 150 },
-          { id: 'diamond', name: '💎 Diamond', price: 5000 },
-          { id: 'trophy', name: '🏆 Trophy', price: 3000 },
-          { id: 'game_console', name: '🎮 Game Console', price: 800 },
-          { id: 'smartphone', name: '📱 Smartphone', price: 1200 }
-        ];
-
-        const embed = {
-          color: 0x00D26A,
-          title: '🛒 Shop Management - Current Items',
-          fields: shopItems.map(item => ({
-            name: `${item.name}`,
-            value: `**ID:** ${item.id}\n**Price:** $${item.price}`,
-            inline: true
-          })),
-          timestamp: new Date().toISOString()
-        };
-
-        return message.reply({ embeds: [embed] });
+        return replyWithCard(message, createCatalogCard('Shop Catalog'));
       }
 
       if (action === 'add' && args.length >= 4) {
         const itemId = args[1];
         const itemName = args[2];
-        const price = parseInt(args[3]);
+        const price = parseInt(args[3], 10);
         const emoji = args[4] || '📦';
 
-        if (isNaN(price) || price < 0) {
-          return message.reply({ content: 'Please provide a valid price!', flags: [64] });
+        if (Number.isNaN(price) || price < 0) {
+          return replyError(message, 'Please provide a valid non-negative price.');
         }
 
-        // In a real implementation, this would save to database
-        const embed = {
-          color: 0x00D26A,
-          title: '➕ Item Added to Shop',
-          description: `${emoji} ${itemName}`,
-          fields: [
-            { name: 'Item ID', value: itemId, inline: true },
-            { name: 'Price', value: `$${price}`, inline: true }
-          ],
-          footer: { text: 'Item has been added to the shop!' },
-          timestamp: new Date().toISOString()
-        };
-
-        return message.reply({ embeds: [embed] });
+        return replyWithCard(
+          message,
+          createPreviewCard('Item Ready To Add', `${emoji} ${itemName}`, itemId, price),
+        );
       }
 
       if (action === 'remove' && args[1]) {
-        const itemId = args[1];
-        
-        const embed = {
-          color: 0x00D26A,
-          title: '➖ Item Removed from Shop',
-          description: `Item with ID **${itemId}** has been removed from the shop.`,
-          footer: { text: 'Item has been removed from the shop!' },
-          timestamp: new Date().toISOString()
-        };
-
-        return message.reply({ embeds: [embed] });
+        return replyWithCard(
+          message,
+          createPreviewCard('Item Ready To Remove', `Item with ID **${args[1]}** has been removed from the shop.`, args[1], 0),
+        );
       }
 
-      return message.reply({ 
-        content: 'Usage: `!shopmanage <add|remove|list> [itemid] [itemname] [price] [emoji]`',
-        flags: [64]
-      });
-      
+      return replyError(message, 'Usage: `!shopmanage <add|remove|list> [itemid] [itemname] [price] [emoji]`');
     } catch (error) {
       console.error('Shopmanage error:', error);
-      await message.reply({ content: 'There was an error managing the shop!', flags: [64] });
+      await replyError(message, 'I could not manage the shop right now.');
     }
   },
 
   async executeSlash(interaction) {
     if (!interaction.member.permissions.has(PermissionFlagsBits.Administrator)) {
-      return interaction.reply({ content: 'You don\'t have permission to manage the shop!', flags: [64] });
+      return replyError(interaction, 'You do not have permission to manage the shop.');
     }
 
     const action = interaction.options.getString('action');
 
     try {
       if (action === 'list') {
-        const shopItems = [
-          { id: 'pizza', name: '🍕 Pizza', price: 50 },
-          { id: 'burger', name: '🍔 Burger', price: 40 },
-          { id: 'taco', name: '🌮 Taco', price: 30 },
-          { id: 'ice_cream', name: '🍦 Ice Cream', price: 35 },
-          { id: 'cake', name: '🍰 Cake', price: 80 },
-          { id: 'wine', name: '🍷 Wine', price: 150 },
-          { id: 'diamond', name: '💎 Diamond', price: 5000 },
-          { id: 'trophy', name: '🏆 Trophy', price: 3000 },
-          { id: 'game_console', name: '🎮 Game Console', price: 800 },
-          { id: 'smartphone', name: '📱 Smartphone', price: 1200 }
-        ];
-
-        const embed = {
-          color: 0x00D26A,
-          title: '🛒 Shop Management - Current Items',
-          fields: shopItems.map(item => ({
-            name: `${item.name}`,
-            value: `**ID:** ${item.id}\n**Price:** $${item.price}`,
-            inline: true
-          })),
-          timestamp: new Date().toISOString()
-        };
-
-        return interaction.reply({ embeds: [embed] });
+        return replyWithCard(interaction, createCatalogCard('Shop Catalog'));
       }
 
       if (action === 'add') {
@@ -167,51 +130,33 @@ module.exports = {
         const emoji = interaction.options.getString('emoji') || '📦';
 
         if (!itemId || !itemName || price === null) {
-          return interaction.reply({ 
-            content: 'Please provide all required information for adding items!',
-            flags: [64]
-          });
+          return replyError(interaction, 'Please provide the item ID, name, and price.');
         }
 
-        const embed = {
-          color: 0x00D26A,
-          title: '➕ Item Added to Shop',
-          description: `${emoji} ${itemName}`,
-          fields: [
-            { name: 'Item ID', value: itemId, inline: true },
-            { name: 'Price', value: `$${price}`, inline: true }
-          ],
-          footer: { text: 'Item has been added to the shop!' },
-          timestamp: new Date().toISOString()
-        };
-
-        return interaction.reply({ embeds: [embed] });
+        return replyWithCard(
+          interaction,
+          createPreviewCard('Item Ready To Add', `${emoji} ${itemName}`, itemId, price),
+        );
       }
 
       if (action === 'remove') {
         const itemId = interaction.options.getString('itemid');
-        
         if (!itemId) {
-          return interaction.reply({ 
-            content: 'Please provide an item ID to remove!',
-            flags: [64]
-          });
+          return replyError(interaction, 'Please provide an item ID to remove.');
         }
-        
-        const embed = {
-          color: 0x00D26A,
-          title: '➖ Item Removed from Shop',
-          description: `Item with ID **${itemId}** has been removed from the shop.`,
-          footer: { text: 'Item has been removed from the shop!' },
-          timestamp: new Date().toISOString()
-        };
 
-        return interaction.reply({ embeds: [embed] });
+        return replyWithCard(
+          interaction,
+          createPreviewCard('Item Ready To Remove', `Item with ID **${itemId}** has been removed from the shop.`, itemId, 0),
+        );
       }
-      
+
+      return replyError(interaction, 'Please choose a valid shop action.');
     } catch (error) {
       console.error('Shopmanage error:', error);
-      await interaction.reply({ content: 'There was an error managing the shop!', flags: [64] });
+      await replyError(interaction, 'I could not manage the shop right now.');
     }
-  }
+  },
 };
+
+

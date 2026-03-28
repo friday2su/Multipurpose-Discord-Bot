@@ -9,6 +9,7 @@ require("dotenv").config();
 const chalk = require("chalk");
 const connectDB = require("./utils/database");
 const { Riffy } = require("riffy");
+const { createNowPlayingCard } = require("./utils/musicCard");
 
 const client = new Client({
   intents: [
@@ -63,7 +64,6 @@ async function startBot() {
       console.log(`✓ Loaded event: ${event.name}`);
     }
 
-    // Riffy event handlers
     client.riffy.on("nodeConnect", (node) => {
       console.log(`Node "${node.name}" connected.`);
     });
@@ -75,16 +75,16 @@ async function startBot() {
     });
 
     client.riffy.on("trackStart", async (player, track) => {
-      console.log('trackStart event fired:', {
-        guildId: player.guildId,
-        trackTitle: track.info.title,
-        playing: player.playing,
-        paused: player.paused
-      });
       const channel = client.channels.cache.get(player.textChannel);
-      channel.send(
-        `Now playing: \`${track.info.title}\` by \`${track.info.author}\`.`
-      );
+      if (!channel) return;
+
+      try {
+        const attachment = await createNowPlayingCard(track, player.position || 0);
+        await channel.send({ files: [attachment] });
+      } catch (error) {
+        console.error('Track start card error:', error);
+        await channel.send(`Now playing | **${track.info.title}** by **${track.info.author || 'Unknown artist'}**`);
+      }
     });
 
     client.riffy.on("queueEnd", async (player) => {
@@ -94,7 +94,9 @@ async function startBot() {
         player.autoplay(player);
       } else {
         player.destroy();
-        channel.send("Queue has ended.");
+        if (channel) {
+          await channel.send("The queue has finished. Add another track whenever you're ready.");
+        }
       }
     });
 
@@ -127,3 +129,5 @@ process.on("uncaughtException", (error) => {
 });
 
 startBot();
+
+

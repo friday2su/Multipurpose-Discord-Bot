@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { replyWithCard } = require('../../utils/respond');
 
 module.exports = {
   category: 'Music',
@@ -23,8 +24,6 @@ module.exports = {
     try {
       const track = player.queue.current;
       const query = `${track.info.author} ${track.info.title}`;
-      
-      // Using a simple lyrics search (in production, you'd use a proper lyrics API)
       const lyrics = await searchLyrics(query);
       
       if (!lyrics) {
@@ -33,8 +32,6 @@ module.exports = {
           flags: [64]
         });
       }
-
-      // Split lyrics if too long
       const maxChars = 2000;
       const lyricsChunks = [];
       for (let i = 0; i < lyrics.length; i += maxChars) {
@@ -53,9 +50,7 @@ module.exports = {
         timestamp: new Date().toISOString()
       };
 
-      const replyMessage = await message.reply({ embeds: [embed] });
-      
-      // Send additional chunks if needed
+      const replyMessage = await replyWithCard(message, embed);
       for (let i = 1; i < lyricsChunks.length; i++) {
         await replyMessage.channel.send(`\`${lyricsChunks[i]}\``);
       }
@@ -88,8 +83,6 @@ module.exports = {
           flags: [64]
         });
       }
-
-      // Split lyrics if too long
       const maxChars = 2000;
       const lyricsChunks = [];
       for (let i = 0; i < lyrics.length; i += maxChars) {
@@ -108,9 +101,7 @@ module.exports = {
         timestamp: new Date().toISOString()
       };
 
-      const replyMessage = await interaction.reply({ embeds: [embed] });
-      
-      // Send additional chunks if needed
+      const replyMessage = await replyWithCard(interaction, embed);
       for (let i = 1; i < lyricsChunks.length; i++) {
         await replyMessage.channel.send(`\`${lyricsChunks[i]}\``);
       }
@@ -123,15 +114,12 @@ module.exports = {
 };
 
 async function searchLyrics(query) {
-  // Simple mock lyrics search (in production, use a real lyrics API)
   const lyrics = {
     'Never Gonna Give You Up': 'Never gonna give you up\nNever gonna let you down\nNever gonna run around and desert you\nNever gonna make you cry, never gonna say goodbye',
     'Bohemian Rhapsody': 'Is this the real life?\nIs this just fantasy?\nCaught in a landslide\nNo escape from reality',
     'Sweet Child O Mine': 'Sweet child o\' mine\nSweet love of mine\nHe\'s got eyes of the bluest skies',
     default: `🎶 ${query} 🎶\n\n[ Lyrics would be displayed here ]\n\n🎵 Full lyrics not available`
   };
-
-  // Simple matching logic
   for (const [song, lyrics] of Object.entries(lyrics)) {
     if (query.toLowerCase().includes(song.toLowerCase())) {
       return lyrics;
@@ -140,3 +128,7 @@ async function searchLyrics(query) {
 
   return lyrics.default;
 }
+
+
+
+

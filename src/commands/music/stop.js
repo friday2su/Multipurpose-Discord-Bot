@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { replyWithCard } = require('../../utils/respond');
 
 module.exports = {
   category: 'Music',
@@ -37,7 +38,7 @@ module.exports = {
         timestamp: new Date().toISOString()
       };
 
-      await message.reply({ embeds: [embed] });
+      await replyWithCard(message, embed);
       
     } catch (error) {
       console.error('Stop error:', error);
@@ -72,7 +73,7 @@ module.exports = {
         timestamp: new Date().toISOString()
       };
 
-      await interaction.reply({ embeds: [embed] });
+      await replyWithCard(interaction, embed);
       
     } catch (error) {
       console.error('Stop error:', error);
@@ -80,3 +81,7 @@ module.exports = {
     }
   }
 };
+
+
+
+

@@ -1,4 +1,5 @@
 const { SlashCommandBuilder } = require('discord.js');
+const { replyWithCard } = require('../../utils/respond');
 
 function formatDuration(milliseconds) {
   if (!milliseconds || milliseconds <= 0) return '00:00';
@@ -64,8 +65,6 @@ module.exports = {
         thumbnail: currentTrack ? { url: currentTrack.info.thumbnail } : null,
         timestamp: new Date().toISOString()
       };
-
-      // Add currently playing if exists
       if (currentTrack) {
         embed.fields.push({
           name: '🎵 Currently Playing',
@@ -73,8 +72,6 @@ module.exports = {
           inline: false
         });
       }
-
-      // Add queue items
       if (queue.length > 0) {
         const queueList = queue.map((track, index) => 
           `**${start + index + 1}.** ${track.info.title} - ${track.info.author}`
@@ -91,7 +88,7 @@ module.exports = {
         text: totalPages > 1 ? `Page ${page} of ${totalPages}` : 'Queue' 
       };
 
-      await message.reply({ embeds: [embed] });
+      await replyWithCard(message, embed);
       
     } catch (error) {
       console.error('Queue error:', error);
@@ -134,8 +131,6 @@ module.exports = {
         thumbnail: currentTrack ? { url: currentTrack.info.thumbnail } : null,
         timestamp: new Date().toISOString()
       };
-
-      // Add currently playing if exists
       if (currentTrack) {
         embed.fields.push({
           name: '🎵 Currently Playing',
@@ -143,8 +138,6 @@ module.exports = {
           inline: false
         });
       }
-
-      // Add queue items
       if (queue.length > 0) {
         const queueList = queue.map((track, index) => 
           `**${start + index + 1}.** ${track.info.title} - ${track.info.author}`
@@ -161,7 +154,7 @@ module.exports = {
         text: totalPages > 1 ? `Page ${page} of ${totalPages}` : 'Queue' 
       };
 
-      await interaction.reply({ embeds: [embed] });
+      await replyWithCard(interaction, embed);
       
     } catch (error) {
       console.error('Queue error:', error);
@@ -169,3 +162,7 @@ module.exports = {
     }
   }
 };
+
+
+
+

@@ -1,228 +1,208 @@
-# Discord.js Bot
+# Multipurpose Discord Bot
 
-A feature-rich Discord bot with both slash and prefix commands, MongoDB integration, music playback via Riffy/Lavalink, and clean code structure.
+A multi-category Discord bot built with `discord.js` v14, MongoDB, and Riffy/Lavalink. It supports both prefix commands and slash commands, includes a full economy system, moderation tools, music playback, and components v2-based responses.
 
-## Features
+## Highlights
 
-- ✅ Global Slash Commands
-- ✅ Prefix Commands  
-- ✅ MongoDB Integration
-- ✅ Category-Based Commands
-- ✅ Moderation Commands
-- ✅ Fun Commands
-- ✅ Utility Commands
-- ✅ Economy System
-- ✅ Music Playback (YouTube/Spotify)
-- ✅ Voice Channel Integration
-- ✅ Clean Code Structure
-- ✅ Event Handling
-- ✅ Error Handling
-- ✅ Colored Console Logs
+- Prefix and slash command support
+- Components v2 help menu and rich response cards
+- MongoDB-backed economy and moderation storage
+- Music playback through Riffy + Lavalink
+- Canvas-based now playing image cards
+- Moderation, utility, fun, info, economy, and music categories
+- Global slash command registration on startup
+
+## Tech Stack
+
+- Node.js
+- `discord.js`
+- `mongoose`
+- `riffy`
+- `canvas`
+- `dotenv`
 
 ## Setup
 
-1. **Install Dependencies**
-   ```bash
-   npm install
-   ```
+1. Install dependencies
 
-2. **Environment Variables**
-   Copy `.env` file and fill in your credentials:
-   ```
-   DISCORD_TOKEN=your_discord_token_here
-   MONGODB_URI=your_mongodb_uri_here
-   CLIENT_ID=your_client_id_here
-   ```
+```bash
+npm install
+```
 
-3. **Run the Bot**
-   ```bash
-   npm start
-   ```
+2. Create your environment file
+
+Copy `.env.example` to `.env` and fill in your values:
+
+```env
+DISCORD_TOKEN=your_discord_bot_token
+MONGODB_URI=your_mongodb_url
+CLIENT_ID=your_client_id
+SUPPORT_SERVER_URL=https://discord.gg/your-server
+VOTE_URL=https://top.gg/bot/your_bot_id/vote
+```
+
+3. Start the bot
+
+```bash
+npm start
+```
+
+## Environment Variables
+
+- `DISCORD_TOKEN`: Your bot token
+- `MONGODB_URI`: MongoDB connection string
+- `CLIENT_ID`: Discord application client ID
+- `SUPPORT_SERVER_URL`: Support server link used in the help menu
+- `VOTE_URL`: Vote link used in the help menu
 
 ## Project Structure
 
-```
+```text
 src/
-├── commands/
-│   ├── utility/        # Utility commands (ping, remind)
-│   ├── info/           # Information commands (userinfo, serverinfo, avatar, help)
-│   ├── moderation/     # Moderation commands (ban, kick, purge, timeout, warn, warnings, slowmode, unban, lock, unlock, nickname, roleinfo)
-│   ├── fun/           # Fun commands (8ball, meme, roll)
-│   ├── economy/       # Economy commands (balance, work, daily, shop, buy, inventory, transfer, gamble, rob, deposit, withdraw, leaderboard, shopmanage)
-│   └── music/         # Music commands (play, skip, stop, queue, volume, loop, nowplaying, lyrics) with Riffy/Lavalink integration
-├── events/             # Event handlers
-├── models/             # MongoDB models
-├── utils/              # Utility functions
-└── index.js           # Main bot file with Riffy integration
+  commands/
+    economy/
+    fun/
+    info/
+    moderation/
+    music/
+    utility/
+  events/
+  models/
+  utils/
+  config.js
+  index.js
 ```
 
-## Available Commands
+## Command Categories
 
-### Prefix Commands (default: `!`)
-- `!ping` - Check bot latency
-- `!userinfo` - Get user information
-- `!serverinfo` - Get server information
-- `!avatar` - Get user's avatar
-- `!remind` - Set a reminder
-- `!help` - Show all commands
-- `!8ball` - Ask magic 8-ball
-- `!roll` - Roll a dice
-- `!meme` - Get a random meme
+### Utility
 
-**Moderation Commands (require permissions):**
-- `!ban` - Ban a user
-- `!kick` - Kick a user
-- `!purge` - Clean messages with filters (1-100)
-- `!timeout` - Timeout a user for specified duration
-- `!warn` - Warn a user (stores warnings)
-- `!warnings` - Check user warnings
-- `!slowmode` - Set channel slowmode (e.g., 5s, 1m, off)
-- `!unban` - Unban a user
-- `!lock` - Lock channel to prevent messages
-- `!unlock` - Unlock channel to allow messages
-- `!nickname` - Change user's nickname
-- `!roleinfo` - Get role information
+- `ping`
+- `remind`
 
-**Economy Commands:**
-- `!balance` - Check your balance
-- `!work` - Work to earn money (1h cooldown)
-- `!daily` - Claim daily reward with streak bonus
-- `!shop` - View server shop items
-- `!buy` - Buy items from shop
-- `!inventory` - View your inventory
-- `!transfer` - Transfer money to another user
-- `!gamble` - Gamble money (dice, coin, slots, number)
-- `!rob` - Attempt to rob another user
-- `!deposit` - Deposit money to bank (safe from robbing)
-- `!withdraw` - Withdraw money from bank
-- `!leaderboard` - Show richest users
-- `!shopmanage` - Manage shop items (Admin only)
+### Info
 
-**Music Commands (requires voice channel):**
-- `!play` - Play a song from YouTube/Spotify or add to queue
-- `!skip` - Skip current song (or multiple songs at once)
-- `!stop` - Stop music and clear queue
-- `!queue` - Show current music queue with pagination and duration
-- `!volume` - Adjust music volume (0-100%) or check current volume
-- `!loop` - Toggle loop modes (queue, song, off)
-- `!nowplaying` - Show currently playing song with progress bar and duration
-- `!lyrics` - Get lyrics for current song
+- `avatar`
+- `help`
+- `serverinfo`
+- `userinfo`
 
-### Slash Commands
-- `/ping` - Check bot latency
-- `/userinfo` - Get user information
-- `/serverinfo` - Get server information
-- `/avatar` - Get user's avatar
-- `/remind` - Set a reminder
-- `/help` - Show all commands (with category filter)
-- `/8ball` - Ask magic 8-ball
-- `/roll` - Roll a dice
-- `/meme` - Get a random meme
+### Fun
 
-**Moderation Commands (require permissions):**
-- `/ban` - Ban a user
-- `/kick` - Kick a user
-- `/purge` - Clean messages with filters (1-100)
-- `/timeout` - Timeout a user for specified duration
-- `/warn` - Warn a user (stores warnings)
-- `/warnings` - Check user warnings
-- `/slowmode` - Set channel slowmode (e.g., 5s, 1m, off)
-- `/unban` - Unban a user
-- `/lock` - Lock channel to prevent messages
-- `/unlock` - Unlock channel to allow messages
-- `/nickname` - Change user's nickname
-- `/roleinfo` - Get role information
+- `8ball`
+- `meme`
+- `roll`
 
-**Economy Commands:**
-- `/balance` - Check your balance
-- `/work` - Work to earn money (1h cooldown)
-- `/daily` - Claim daily reward with streak bonus
-- `/shop` - View server shop items
-- `/buy` - Buy items from shop
-- `/inventory` - View your inventory
-- `/transfer` - Transfer money to another user
-- `/gamble` - Gamble money (dice, coin, slots, number)
-- `/rob` - Attempt to rob another user
-- `/deposit` - Deposit money to bank (safe from robbing)
-- `/withdraw` - Withdraw money from bank
-- `/leaderboard` - Show richest users
-- `/shopmanage` - Manage shop items (Admin only)
+### Moderation
 
-**Music Commands (requires voice channel):**
-- `/play` - Play a song from YouTube/Spotify or add to queue
-- `/skip` - Skip current song (or multiple songs at once)
-- `/stop` - Stop music and clear queue
-- `/queue` - Show current music queue with pagination and duration
-- `/volume` - Adjust music volume (0-100%) or check current volume
-- `/loop` - Toggle loop modes (queue, song, off)
-- `/nowplaying` - Show currently playing song with progress bar and duration
-- `/lyrics` - Get lyrics for current song
+- `ban`
+- `kick`
+- `lock`
+- `nickname`
+- `purge`
+- `roleinfo`
+- `slowmode`
+- `timeout`
+- `unban`
+- `unlock`
+- `warn`
+- `warnings`
 
-### Command Categories
-- **Utility**: General purpose commands
-- **Info**: Information about users, servers, etc.
-- **Moderation**: Server moderation tools
-- **Fun**: Entertainment commands
-- **Economy**: Virtual economy with shops, gambling, and banking
-- **Music**: Audio playback with YouTube/Spotify support via Riffy/Lavalink
+### Economy
 
-## Adding New Commands
+- `balance`
+- `buy`
+- `daily`
+- `deposit`
+- `gamble`
+- `inventory`
+- `leaderboard`
+- `rob`
+- `shop`
+- `shopmanage`
+- `transfer`
+- `withdraw`
+- `work`
 
-Create a new file in `src/commands/[category]/`:
-```javascript
-const { SlashCommandBuilder } = require('discord.js');
+### Music
 
-module.exports = {
-  category: 'CategoryName',
-  name: 'commandname',
-  description: 'Command description',
-  slashOnly: false, // Set to true if only slash command
-  
-  // Slash command data
-  data: new SlashCommandBuilder()
-    .setName('commandname')
-    .setDescription('Command description')
-    .addStringOption(option => 
-      option.setName('option')
-        .setDescription('Option description')
-        .setRequired(false)),
+- `loop`
+- `lyrics`
+- `nowplaying`
+- `play`
+- `queue`
+- `skip`
+- `stop`
+- `volume`
 
-  // Prefix command execution
-  async executePrefix(message, args, client) {
-    // Your prefix command logic here
-    await message.reply('This is the prefix command!');
-  },
+## Notable Features
 
-  // Slash command execution
-  async executeSlash(interaction) {
-    // Your slash command logic here
-    await interaction.reply('This is the slash command!');
-  }
-};
-```
+### Help Menu
 
-## Important Notes
+The help command uses components v2 and includes:
 
-- **Global Commands**: This bot uses global slash commands which may take up to 1 hour to propagate across all servers
-- **Permissions**: Moderation commands require appropriate Discord permissions
-- **Categories**: Create new folders in `src/commands/` for new categories
-- **Database**: MongoDB is used for storing server and user data
-- **Music System**: Powered by Riffy/Lavalark for high-quality audio streaming
-- **Voice Requirements**: Music commands require bot to have proper voice channel permissions
-- **Dependencies**: Requires Lavalark server connection for music functionality
+- A category overview panel
+- A select menu for switching categories
+- Invite, support, and vote link buttons
 
-## MongoDB Models
+### Economy System
 
-The bot includes models for:
-- **Guild** - Server-specific data and configuration
-- **User** - User-specific data including economy and warnings
+The economy system includes:
+
+- Wallet and bank balances
+- Daily rewards and work payouts
+- Shop and inventory support
+- Transfers, robbery, and gambling
+- Server leaderboard views
 
 ### Music System
-- **Riffy Integration**: Uses Riffy library for Lavalark connectivity
-- **YouTube/Spotify Support**: Search and play from multiple platforms
-- **Queue Management**: Advanced queue system with pagination
-- **Duration Formatting**: Human-readable time display (MM:SS, HH:MM:SS)
-- **Volume Control**: Adjustable audio levels with real-time feedback
-- **Loop Modes**: Song, queue, and loop-off functionality
 
-You can extend these models or create new ones in `src/models/`.
+The music system includes:
+
+- Queue-based playback
+- Play, skip, stop, loop, queue, and volume controls
+- Canvas now playing cards
+- Lavalink-backed playback through Riffy
+
+## Music Requirements
+
+This bot expects a working Lavalink-compatible node for music playback. The current connection is configured in `src/index.js`.
+
+Make sure the bot has permission to:
+
+- Connect to voice channels
+- Speak in voice channels
+- Send messages in the bound text channel
+
+## Database Models
+
+Current models include:
+
+- `Guild`
+- `User`
+- `Warning`
+
+## Running Notes
+
+- Slash commands are registered globally on startup
+- Global slash command updates can take some time to propagate
+- Prefix is currently set to `!`
+- Most rich bot responses are rendered through components v2
+
+## Development Notes
+
+To add a new command:
+
+1. Create a file in the correct category inside `src/commands/`
+2. Export:
+   - `category`
+   - `name`
+   - `description`
+   - `data`
+   - `executePrefix(...)`
+   - `executeSlash(...)`
+3. Restart the bot so commands are loaded and slash commands are refreshed
+
+## License
+
+MIT

@@ -1,133 +1,78 @@
 const { SlashCommandBuilder } = require('discord.js');
+const {
+  formatCurrency,
+  formatDuration,
+  getCooldownRemaining,
+  getOrCreateUser,
+} = require('../../utils/economy');
+const { replyError, replyWithCard } = require('../../utils/respond');
+
+const WORK_COOLDOWN = 60 * 60 * 1000;
+const JOBS = [
+  { name: 'freelance developer', min: 160, max: 420 },
+  { name: 'graphic designer', min: 120, max: 320 },
+  { name: 'community manager', min: 90, max: 240 },
+  { name: 'data analyst', min: 180, max: 450 },
+  { name: 'support specialist', min: 80, max: 210 },
+  { name: 'project lead', min: 200, max: 500 },
+];
+
+function pickJob() {
+  const job = JOBS[Math.floor(Math.random() * JOBS.length)];
+  const earned = Math.floor(Math.random() * (job.max - job.min + 1)) + job.min;
+  return { job, earned };
+}
+
+async function handleWork(target, user) {
+  const userData = await getOrCreateUser(user);
+  const cooldownRemaining = getCooldownRemaining(userData.lastWork, WORK_COOLDOWN);
+
+  if (cooldownRemaining > 0) {
+    return replyError(target, `You can work again in ${formatDuration(cooldownRemaining)}.`);
+  }
+
+  const { job, earned } = pickJob();
+  userData.balance += earned;
+  userData.lastWork = new Date();
+  await userData.save();
+
+  return replyWithCard(target, {
+    title: 'Work Complete',
+    description: `You worked as a **${job.name}** and earned **${formatCurrency(earned)}**.`,
+    fields: [
+      { name: 'Wallet', value: formatCurrency(userData.balance), inline: true },
+      { name: 'Bank', value: formatCurrency(userData.bank), inline: true },
+      { name: 'Next shift', value: 'Available in 1 hour', inline: true },
+    ],
+    footer: { text: 'Come back later to earn another payout.' },
+  });
+}
 
 module.exports = {
   category: 'Economy',
   name: 'work',
   description: 'Work to earn money',
   slashOnly: false,
-  
+
   data: new SlashCommandBuilder()
     .setName('work')
     .setDescription('Work to earn money'),
 
-  async executePrefix(message, args, client) {
-    const User = require('../../models/User');
-    const ms = require('ms');
-    
+  async executePrefix(message) {
     try {
-      let userData = await User.findOne({ userId: message.author.id });
-      
-      if (!userData) {
-        userData = new User({
-          userId: message.author.id,
-          username: message.author.username,
-          tag: message.author.tag,
-          balance: 0,
-          bank: 0
-        });
-      }
-
-      const cooldown = 60 * 60 * 1000; // 1 hour
-      const now = Date.now();
-      
-      if (userData.lastWork && (userData.lastWork + cooldown) > now) {
-        const timeLeft = Math.ceil((userData.lastWork + cooldown - now) / 1000);
-        return message.reply({ 
-          content: `⏰ You can work again in ${timeLeft} seconds!` 
-        });
-      }
-
-      const jobs = [
-        { name: 'software developer', min: 100, max: 500 },
-        { name: 'graphic designer', min: 80, max: 300 },
-        { name: 'content creator', min: 50, max: 200 },
-        { name: 'customer support', min: 40, max: 150 },
-        { name: 'data analyst', min: 120, max: 400 },
-        { name: 'project manager', min: 150, max: 450 }
-      ];
-
-      const job = jobs[Math.floor(Math.random() * jobs.length)];
-      const earned = Math.floor(Math.random() * (job.max - job.min + 1)) + job.min;
-
-      userData.balance += earned;
-      userData.lastWork = now;
-      await userData.save();
-
-      const embed = {
-        color: 0x00D26A,
-        title: '💼 Work Completed!',
-        description: `You worked as a **${job.name}** and earned **$${earned}**!`,
-        fields: [
-          { name: 'New Balance', value: `$${userData.balance.toLocaleString()}`, inline: true },
-          { name: 'Next Work', value: 'in 1 hour', inline: true }
-        ],
-        timestamp: new Date().toISOString()
-      };
-
-      await message.reply({ embeds: [embed] });
+      await handleWork(message, message.author);
     } catch (error) {
       console.error('Work error:', error);
-      await message.reply({ content: 'There was an error while working!', flags: [64] });
+      await replyError(message, 'I could not complete your work payout right now.');
     }
   },
 
   async executeSlash(interaction) {
-    const User = require('../../models/User');
-    
     try {
-      let userData = await User.findOne({ userId: interaction.user.id });
-      
-      if (!userData) {
-        userData = new User({
-          userId: interaction.user.id,
-          username: interaction.user.username,
-          tag: interaction.user.tag,
-          balance: 0,
-          bank: 0
-        });
-      }
-
-      const cooldown = 60 * 60 * 1000; // 1 hour
-      const now = Date.now();
-      
-      if (userData.lastWork && (userData.lastWork + cooldown) > now) {
-        const timeLeft = Math.ceil((userData.lastWork + cooldown - now) / 1000);
-        return interaction.reply({ 
-          content: `⏰ You can work again in ${timeLeft} seconds!` 
-        });
-      }
-
-      const jobs = [
-        { name: 'software developer', min: 100, max: 500 },
-        { name: 'graphic designer', min: 80, max: 300 },
-        { name: 'content creator', min: 50, max: 200 },
-        { name: 'customer support', min: 40, max: 150 },
-        { name: 'data analyst', min: 120, max: 400 },
-        { name: 'project manager', min: 150, max: 450 }
-      ];
-
-      const job = jobs[Math.floor(Math.random() * jobs.length)];
-      const earned = Math.floor(Math.random() * (job.max - job.min + 1)) + job.min;
-
-      userData.balance += earned;
-      userData.lastWork = now;
-      await userData.save();
-
-      const embed = {
-        color: 0x00D26A,
-        title: '💼 Work Completed!',
-        description: `You worked as a **${job.name}** and earned **$${earned}**!`,
-        fields: [
-          { name: 'New Balance', value: `$${userData.balance.toLocaleString()}`, inline: true },
-          { name: 'Next Work', value: 'in 1 hour', inline: true }
-        ],
-        timestamp: new Date().toISOString()
-      };
-
-      await interaction.reply({ embeds: [embed] });
+      await handleWork(interaction, interaction.user);
     } catch (error) {
       console.error('Work error:', error);
-      await interaction.reply({ content: 'There was an error while working!', flags: [64] });
+      await replyError(interaction, 'I could not complete your work payout right now.');
     }
-  }
+  },
 };

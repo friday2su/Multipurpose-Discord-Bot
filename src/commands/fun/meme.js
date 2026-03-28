@@ -1,5 +1,6 @@
 const { SlashCommandBuilder } = require('discord.js');
 const https = require('https');
+const { replyWithCard } = require('../../utils/respond');
 
 module.exports = {
   category: 'Fun',
@@ -13,7 +14,6 @@ module.exports = {
 
   async executePrefix(message, args, client) {
     try {
-      // Using a public meme API with built-in https module
       const data = await new Promise((resolve, reject) => {
         https.get('https://meme-api.com/gimme', (res) => {
           let data = '';
@@ -40,7 +40,7 @@ module.exports = {
         timestamp: new Date().toISOString()
       };
 
-      await message.reply({ embeds: [embed] });
+      await replyWithCard(message, embed);
     } catch (error) {
       console.error('Meme error:', error);
       await message.reply({ content: 'Could not fetch a meme at this time. Try again later!', flags: [64] });
@@ -49,7 +49,6 @@ module.exports = {
 
   async executeSlash(interaction) {
     try {
-      // Using a public meme API with built-in https module
       const data = await new Promise((resolve, reject) => {
         https.get('https://meme-api.com/gimme', (res) => {
           let data = '';
@@ -76,10 +75,14 @@ module.exports = {
         timestamp: new Date().toISOString()
       };
 
-      await interaction.reply({ embeds: [embed] });
+      await replyWithCard(interaction, embed);
     } catch (error) {
       console.error('Meme error:', error);
       await interaction.reply({ content: 'Could not fetch a meme at this time. Try again later!', flags: [64] });
     }
   }
 };
+
+
+
+

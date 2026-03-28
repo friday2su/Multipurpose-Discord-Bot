@@ -107,3 +107,4 @@ function parseDuration(durationStr) {
 
   return parseInt(amount) * multipliers[unit];
 }
+

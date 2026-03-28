@@ -12,8 +12,6 @@ module.exports = {
     client.config = require('../config');
     client.commands = new Map();
     client.slashCommands = new Map();
-
-    // Initialize Riffy
     client.riffy.init(client.user.id);
 
     loadCommands(client);
@@ -34,7 +32,7 @@ module.exports = {
       );
 
       console.log(chalk.green.bold('✓ Successfully reloaded global application (/) commands'));
-      console.log(chalk.yellow('⚠️ Global commands may take up to 1 hour to propagate'));
+      console.log(chalk.yellow('Slash commands were refreshed. Global propagation can still take some time.'));
     } catch (error) {
       console.error(chalk.red.bold('✗ Error reloading global application (/) commands:'), error);
     }
@@ -42,3 +40,6 @@ module.exports = {
     client.user.setActivity(`${client.config.prefix}help | /help`, { type: 'WATCHING' });
   }
 };
+
+
+
