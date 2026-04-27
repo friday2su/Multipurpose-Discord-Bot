@@ -5,11 +5,19 @@ const {
 } = require("discord.js");
 const fs = require("fs");
 const path = require("path");
+const dns = require("dns");
 require("dotenv").config();
 const chalk = require("chalk");
 const connectDB = require("./utils/database");
 const { Riffy } = require("riffy");
 const { createNowPlayingCard } = require("./utils/musicCard");
+
+dns.setServers([
+  "8.8.8.8",
+  "8.8.4.4",
+  "1.1.1.1",
+  "1.0.0.1"
+]);
 
 const client = new Client({
   intents: [

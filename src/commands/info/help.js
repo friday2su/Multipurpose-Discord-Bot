@@ -4,6 +4,11 @@ const {
   ButtonStyle,
   SlashCommandBuilder,
   StringSelectMenuBuilder,
+  MessageFlags,
+  TextDisplayBuilder,
+  ContainerBuilder,
+  SeparatorBuilder,
+  SeparatorSpacingSize,
 } = require('discord.js');
 const { createCardMessage, replyError } = require('../../utils/respond');
 
@@ -86,30 +91,28 @@ function createCommandField(commands, mode, prefix, categoryKey) {
   };
 }
 
-function createSelectRow(groupedCommands, mode, userId, selectedCategory) {
-  return new ActionRowBuilder().addComponents(
-    new StringSelectMenuBuilder()
-      .setCustomId(`help-category:${mode}:${userId}`)
-      .setPlaceholder('Choose a category')
-      .addOptions([
-        {
-          label: 'Overview',
-          description: 'See the category summary panel',
-          value: 'overview',
-          default: !selectedCategory,
-        },
-        ...CATEGORY_ORDER.filter((key) => groupedCommands[key]?.length).map((key) => ({
-          label: CATEGORY_META[key].label,
-          description: CATEGORY_META[key].summary,
-          value: key,
-          default: selectedCategory === key,
-        })),
-      ]),
-  ).toJSON();
+function createSelectMenu(groupedCommands, mode, userId, selectedCategory) {
+  return new StringSelectMenuBuilder()
+    .setCustomId(`help-category:${mode}:${userId}`)
+    .setPlaceholder('Choose a category')
+    .addOptions([
+      {
+        label: 'Overview',
+        description: 'See the category summary panel',
+        value: 'overview',
+        default: !selectedCategory,
+      },
+      ...CATEGORY_ORDER.filter((key) => groupedCommands[key]?.length).map((key) => ({
+        label: CATEGORY_META[key].label,
+        description: CATEGORY_META[key].summary,
+        value: key,
+        default: selectedCategory === key,
+      })),
+    ]);
 }
 
-function createLinkRow(client) {
-  return new ActionRowBuilder().addComponents(
+function createLinkButtons(client) {
+  return [
     new ButtonBuilder()
       .setLabel('Invite')
       .setStyle(ButtonStyle.Link)
@@ -122,7 +125,7 @@ function createLinkRow(client) {
       .setLabel('Vote')
       .setStyle(ButtonStyle.Link)
       .setURL(getVoteUrl(client)),
-  ).toJSON();
+  ];
 }
 
 function createHelpPayload({ client, mode, selectedCategory, userId }) {
@@ -130,37 +133,50 @@ function createHelpPayload({ client, mode, selectedCategory, userId }) {
   const groupedCommands = groupCommands(commands);
   const prefix = client.config.prefix;
   const totalMembers = client.guilds.cache.reduce((count, guild) => count + (guild.memberCount || 0), 0);
-  const embed = {
-    title: 'Help Menu',
-  };
+
+  let titleText = '# Help Menu\n\n';
+  let contentText = '';
 
   if (selectedCategory && groupedCommands[selectedCategory]?.length) {
-    embed.thumbnail = {
-      url: client.user.displayAvatarURL({ dynamic: true, size: 256 }),
-    };
-    embed.description = `Browsing **${CATEGORY_META[selectedCategory].label}** commands for ${mode} mode.`;
-    embed.fields = [createCommandField(groupedCommands[selectedCategory], mode, prefix, selectedCategory)];
-    embed.footer = { text: 'Use the select menu to switch categories.' };
+    titleText += `Browsing **${CATEGORY_META[selectedCategory].label}** commands for ${mode} mode.\n\n`;
+    const commandsList = groupedCommands[selectedCategory]
+      .map((command) => formatCommandLine(command, mode, prefix))
+      .join('\n');
+    contentText = `**${CATEGORY_META[selectedCategory].label} Commands**\n${commandsList}\n\n*Use the select menu to switch categories.*`;
   } else {
-    embed.thumbnail = {
-      url: client.user.displayAvatarURL({ dynamic: true, size: 256 }),
-    };
-    embed.description = [
+    titleText += [
       'Hey there.',
       `- Total commands: \`${commands.length}\``,
-      `- Use ${mode === 'prefix' ? `\`${prefix}help <category>\`` : '`/help category:<name>`'} or the selector below to jump into a category`,
       `- Running in \`${client.guilds.cache.size}\` servers with \`${totalMembers}\` members`,
     ].join('\n');
-    embed.fields = createOverviewFields(groupedCommands);
-    embed.footer = { text: 'Choose a category from the menu to see its commands.' };
+
+    const categoryPreview = CATEGORY_ORDER
+      .filter((key) => groupedCommands[key]?.length)
+      .map((key) => `• **${CATEGORY_META[key].label}**: ${groupedCommands[key].length} commands`)
+      .join('\n');
+
+    contentText = `\n\n**Overview**\n${categoryPreview}\n\n*Choose a category from the menu to see its commands.*`;
   }
 
-  return createCardMessage(embed, {
-    components: [
-      createSelectRow(groupedCommands, mode, userId, selectedCategory),
-      createLinkRow(client),
-    ],
-  });
+  const textDisplay = new TextDisplayBuilder().setContent(titleText + contentText);
+
+  const separator = new SeparatorBuilder()
+    .setDivider(true)
+    .setSpacing(SeparatorSpacingSize.Small);
+
+  const selectMenu = createSelectMenu(groupedCommands, mode, userId, selectedCategory);
+  const linkButtons = createLinkButtons(client);
+
+  const container = new ContainerBuilder()
+    .addTextDisplayComponents(textDisplay)
+    .addSeparatorComponents(separator)
+    .addActionRowComponents(actionRow => actionRow.setComponents(selectMenu))
+    .addActionRowComponents(actionRow => actionRow.setComponents(...linkButtons));
+
+  return {
+    flags: MessageFlags.IsComponentsV2,
+    components: [container],
+  };
 }
 
 module.exports = {
@@ -171,17 +187,7 @@ module.exports = {
 
   data: new SlashCommandBuilder()
     .setName('help')
-    .setDescription('Show all available commands')
-    .addStringOption((option) =>
-      option
-        .setName('category')
-        .setDescription('Filter commands by category')
-        .addChoices(
-          ...CATEGORY_ORDER.map((key) => ({
-            name: CATEGORY_META[key].label,
-            value: key,
-          })),
-        )),
+    .setDescription('Show all available commands'),
 
   async executePrefix(message, args, client) {
     const selectedCategory = CATEGORY_ORDER.includes((args[0] || '').toLowerCase())
@@ -199,12 +205,11 @@ module.exports = {
   },
 
   async executeSlash(interaction, client) {
-    const selectedCategory = interaction.options.getString('category');
     await interaction.reply(
       createHelpPayload({
         client,
         mode: 'slash',
-        selectedCategory,
+        selectedCategory: null,
         userId: interaction.user.id,
       }),
     );
@@ -214,7 +219,15 @@ module.exports = {
     const [, mode, ownerId] = interaction.customId.split(':');
 
     if (interaction.user.id !== ownerId) {
-      return replyError(interaction, 'Only the original user can use this help menu.', { ephemeral: true });
+      const errorContainer = new ContainerBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder().setContent('⚠️ Only the original user can use this help menu.')
+        );
+
+      return interaction.reply({
+        flags: MessageFlags.IsComponentsV2 | MessageFlags.Ephemeral,
+        components: [errorContainer],
+      });
     }
 
     const selectedCategory = interaction.values[0] === 'overview' ? null : interaction.values[0];
